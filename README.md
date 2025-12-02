@@ -2,16 +2,15 @@
 
 ## Overview
 
-A full-stack social media feed application built with FastAPI (backend) and React with TypeScript (frontend). The application provides core social media functionalities including user authentication, post creation with images, commenting, liking, and notifications.
+A social media application's Backend built with FastAPI. The application provides core social media functionalities including user authentication, post creation with images, commenting, liking, and notifications.
 
 ## Technology Overview
 
 The application follows a **clean architecture** pattern with clear separation of concerns:
 
 - **Backend**: FastAPI with async SQLAlchemy, PostgreSQL database, Redis for caching and notifications
-- **Frontend**: React 19 with TypeScript, Vite build tool, React Router for navigation
 - **Database**: PostgreSQL with async SQLAlchemy ORM and Alembic for migrations
-- **Caching/Storage**: Redis for refresh token storage(so that we can blacklist them) and notification management
+- **Caching/Storage**: Redis for refresh token storage (so that we can blacklist them) and notification management
 
 ## Core Functionalities
 
@@ -23,7 +22,6 @@ The application follows a **clean architecture** pattern with clear separation o
 - JWT-based authentication with access tokens and refresh tokens
 - Refresh tokens stored in Redis with session management
 - HttpOnly cookies for secure token storage
-- Protected routes on frontend that require authentication
 - Logout functionality that revokes refresh tokens
 
 **Decisions:**
@@ -87,7 +85,7 @@ The application follows a **clean architecture** pattern with clear separation o
 - **Composite Index**: Index on `(target_type, target_id)` for efficient lookups
 - **Unique Constraint**: Prevents same user from liking same content multiple times
 
-### 6. Notification Service
+### 5. Notification Service
 
 **Functionality:**
 
@@ -105,19 +103,6 @@ The application follows a **clean architecture** pattern with clear separation o
 - **Redis Storage**: Notifications stored in Redis (DB 2) for fast access and automatic expiration
 - **Fire-and-Forget Model**: Notifications are consumed once when fetched, reducing storage overhead
 
-### 7. Frontend Features
-
-**Functionality:**
-
-- Login and registration pages
-- Protected feed route requiring authentication
-- Feed page displaying posts with:
-  - Post creation form with image upload
-  - Visibility selector (public/private)
-  - Like/unlike functionality
-  - Notification dropdown with updates
-  - Logout functionality
-
 ## Technical Stack
 
 ### Backend
@@ -130,14 +115,6 @@ The application follows a **clean architecture** pattern with clear separation o
 - **Password Hashing**: bcrypt 5.0, passlib 1.7.4
 - **Caching/Storage**: Redis 6.4.0 (async)
 - **Validation**: Pydantic 2.11.9
-
-### Frontend
-
-- **Framework**: React 19.2.0
-- **Language**: TypeScript 5.9.3
-- **Build Tool**: Vite 7.2.4
-- **Routing**: React Router DOM 7.9.6
-- **HTTP Client**: Axios 1.13.2
 
 ## Database Schema
 
@@ -225,8 +202,6 @@ Potential areas for extension:
 
 - User profiles and friend relationships
 - Post sharing functionality
-- Rich text editing for posts/comments
-- Image optimization and CDN integration
 - Notification persistence for historical viewing
 - Rate limiting and API throttling
-- Proper image storage(s3,GCS)
+- Proper image storage (S3, GCS)
