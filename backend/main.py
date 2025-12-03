@@ -1,7 +1,4 @@
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from starlette.middleware.cors import CORSMiddleware
-
 from presentation.routes.auth_routes import authRouter
 from presentation.routes.comment_routes import commentRouter
 from presentation.routes.like_routes import likeRouter
@@ -9,6 +6,7 @@ from presentation.routes.media_routes import mediaRouter
 from presentation.routes.notification_routes import notificationRouter
 from presentation.routes.post_routes import postRouter
 from presentation.routes.user_routes import userRouter
+from starlette.middleware.cors import CORSMiddleware
 
 app = FastAPI(debug=True)
 origins = [
@@ -24,7 +22,7 @@ app.add_middleware(
 )
 
 # Mount static files directory for uploaded images
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Register routers
 app.include_router(authRouter, prefix="/api", tags=["Auth"])

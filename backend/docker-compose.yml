@@ -1,0 +1,47 @@
+networks:
+  default:
+    name: sharespace
+    external: false
+
+services:
+  db:
+    image: postgres:alpine
+    container_name: sharespace_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - sharespace-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "user"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+    env_file:
+      - .env
+
+  redis:
+    image: redis:alpine
+    container_name: sharespace-redis
+    ports:
+      - "6378:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+    env_file:
+      - .env
+
+  backend:
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    build: .
+    container_name: sharespace-backend
+    ports:
+      - "8001:8080"
+    env_file:
+      - .env
