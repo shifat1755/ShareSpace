@@ -1,18 +1,21 @@
+volumes:
+  sharespace-db-data:
+
 networks:
   default:
     name: sharespace
-    external: false
+    external: False
 
 services:
   db:
     image: postgres:alpine
-    container_name: sharespace_db
+    container_name: sharespace-db
     ports:
       - "5433:5432"
     volumes:
       - sharespace-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "user"]
+      test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
       timeout: 2s
       retries: 3
@@ -45,3 +48,14 @@ services:
       - "8001:8080"
     env_file:
       - .env
+
+  nginx:
+    image: nginx:alpine
+    container_name: sharespace-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_started

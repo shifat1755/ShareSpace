@@ -4,7 +4,7 @@ from logging.config import fileConfig
 from alembic import context
 from config import DatabaseConfig
 from infrastructure.data.database import Base
-from infrastructure.data.models import *
+from infrastructure.data.models import *  # noqa: F403
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine
 

@@ -1,9 +1,21 @@
 FROM python:3.13-slim
-WORKDIR user/app
-COPY . .
-EXPOSE 8080
+
+# Install netcat for entrypoint wait script
+RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m shifat
+
+WORKDIR /home/shifat/app
+
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-RUN useradd shifat
+
+COPY . .
+
+RUN chmod +x entrypoint.sh
+
+# Switch to non-root
 USER shifat
 
-CMD ["uvicorn","main:app","--host","0.0.0.0","--port","8080"]
+ENTRYPOINT ["./entrypoint.sh"]

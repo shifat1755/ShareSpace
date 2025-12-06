@@ -71,3 +71,7 @@ class s3Config:
     S3_SECRET_KEY = os.getenv("s3_SECRET_KEY")
     S3_BUCKET_NAME = os.getenv("s3_BUCKET_NAME")
     ENDPOINT_URL = os.getenv("ENDPOINT_URL")
+
+
+if __name__ == "__main__":
+    print(DatabaseConfig.get_url())
