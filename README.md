@@ -2,206 +2,119 @@
 
 ## Overview
 
-A social media application's Backend built with FastAPI. The application provides core social media functionalities including user authentication, post creation with images, commenting, liking, and notifications.
+Backend for a social media app built with **FastAPI**, offering user authentication, posts with images, commenting, liking, and real-time notifications.
 
-## Technology Overview
+## Technology Stack
 
-The application follows a **clean architecture** pattern with clear separation of concerns:
+- **Backend:** FastAPI, async SQLAlchemy, PostgreSQL, Redis
+- **Database:** PostgreSQL + Alembic for migrations
+- **Caching/Storage:** Redis for refresh tokens & notifications
+- **Authentication:** JWT, HttpOnly cookies, bcrypt for password hashing
+- **Validation:** Pydantic
+- **File Storage:** R2 for image uploads
+- **Reverse Proxy:** Nginx for performance and security
 
-- **Backend**: FastAPI with async SQLAlchemy, PostgreSQL database, Redis for caching and notifications
-- **Database**: PostgreSQL with async SQLAlchemy ORM and Alembic for migrations
-- **Caching/Storage**: Redis for refresh token storage (so that we can blacklist them) and notification management
+## Core Features
 
-## Core Functionalities
+### Authentication & Authorization
 
-### 1. Authentication & Authorization
+- JWT-based login with access & refresh tokens
+- Refresh tokens stored in Redis per session (multi-device support)
+- HttpOnly cookies to prevent XSS
+- Logout revokes refresh tokens
 
-**Functionality:**
+### Posts
 
-- User registration with email, password, first name, last name
-- JWT-based authentication with access tokens and refresh tokens
-- Refresh tokens stored in Redis with session management
-- HttpOnly cookies for secure token storage
-- Logout functionality that revokes refresh tokens
+- Create/update/delete posts with optional images
+- Visibility: `public` (default) or `private`
+- Pagination, filtering (author/visibility), sorting (newest, oldest, most liked/commented)
+- Denormalized `likes_count` & `comments_count` for performance
 
-**Decisions:**
+### Comments
 
-- **JWT Tokens**: Used for stateless authentication with short-lived access tokens and longer-lived refresh tokens
-- **Redis for Refresh Tokens**: Chose Redis over database storage for better performance and scalability. Refresh tokens are stored with session IDs to support multiple device sessions
-- **HttpOnly Cookies**: Refresh tokens stored in HttpOnly cookies to prevent XSS attacks
-- **Session-based Refresh Tokens**: Each login creates a unique session ID, allowing users to manage multiple active sessions and revoking them when user logged out or request a new access token.
+- Nested comments (parent-child)
+- Pagination and top-level filtering
+- Update/delete own comments
+- Cascading deletion when parent post is deleted
+- Denormalized `likes_count` for fast queries
 
-### 2. Post Management
+### Likes
 
-**Functionality:**
+- Toggle likes on posts & comments
+- Polymorphic model: supports both posts & comments
+- Unique constraint per user/content
+- Counts automatically incremented/decremented
 
-- Create posts with text content and optional image uploads
-- Image files stored in organized directory structure (`uploads/posts/user_{user_id}/`)
-- Post visibility settings: `public` (default) or `private`
-- View posts with pagination support (skip/limit)
-- Filter posts by author, visibility
-- Sort posts by: newest, oldest, most_liked, most_commented
-- Access control: private posts only visible to the author
-- Update and delete own posts
-- Automatic increment/decrement of likes_count and comments_count
+### Notifications
 
-**Decisions:**
-
-- **Denormalized Counts**: `likes_count` and `comments_count` stored directly on Post model for faster queries without joins
-- **Optional Authentication**: Post listing endpoint accepts optional authentication to show private posts to authors
-
-### 3. Comment System
-
-**Functionality:**
-
-- Create comments on posts
-- Nested comment replies (parent-child relationship)
-- View comments with pagination
-- Filter to show only top-level comments or include replies
-- Sort comments by: newest, oldest, most_liked
-- Update and delete own comments
-- Automatic increment of post's `comments_count` when comment is created
-- Cascade deletion: deleting a post deletes all its comments
-
-**Decisions:**
-
-- **Top-level Filtering**: Default behavior shows only top-level comments to reduce initial load, with option to fetch replies
-- **Denormalized Counts**: Comment `likes_count` stored on Comment model for performance
-
-### 4. Like System
-
-**Functionality:**
-
-- Toggle likes on posts and comments (like/unlike)
-- View list of users who liked a post or comment
-- Automatic increment/decrement of like counts
-- Unique constraint prevents duplicate likes from same user
-- Supports both post and comment likes through polymorphic `target_type` field
-
-**Decisions:**
-
-- **Polymorphic Likes**: Single `Like` model handles both post and comment likes using `target_type` enum and `target_id`
-- **Toggle Behavior**: Single endpoint toggles like state (creates if not exists, deletes if exists)
-- **Composite Index**: Index on `(target_type, target_id)` for efficient lookups
-- **Unique Constraint**: Prevents same user from liking same content multiple times
-
-### 5. Notification Service
-
-**Functionality:**
-
-- Real-time notifications stored in Redis
-- Notification types:
-  - `post_liked`: When someone likes your post
-  - `post_commented`: When someone comments on your post
-  - `comment_liked`: When someone likes your comment
-- Fetch notifications for current user
-- Notifications automatically deleted after being fetched (fire-and-forget model)
-- 7-day expiration on notification lists
-
-**Decisions:**
-
-- **Redis Storage**: Notifications stored in Redis (DB 2) for fast access and automatic expiration
-- **Fire-and-Forget Model**: Notifications are consumed once when fetched, reducing storage overhead
-
-## Technical Stack
-
-### Backend
-
-- **Framework**: FastAPI 0.117.1
-- **Database**: PostgreSQL with asyncpg driver
-- **ORM**: SQLAlchemy 2.0 (async)
-- **Migrations**: Alembic
-- **Authentication**: PyJWT 2.10.1
-- **Password Hashing**: bcrypt 5.0, passlib 1.7.4
-- **Caching/Storage**: Redis 6.4.0 (async)
-- **Validation**: Pydantic 2.11.9
+- Real-time notifications stored in Redis (fire-and-forget)
+- Types: post liked, post commented, comment liked
+- Expire after 7 days, fetched once per user
 
 ## Database Schema
 
-### Users Table
-
-- User authentication and profile information
-- Relationships: posts, comments, likes
-
-### Posts Table
-
-- Content, image_url, visibility (public/private)
-- Denormalized: likes_count, comments_count
-- Relationships: author, comments
-
-### Comments Table
-
-- Self-referential for nested replies (parent_comment_id)
-- Denormalized: likes_count
-- Relationships: post, author, parent_comment, replies
-
-### Likes Table
-
-- Polymorphic: target_type (post/comment) + target_id
-- Unique constraint: (user_id, target_id, target_type)
-- Composite index for efficient lookups
+- **Users:** Authentication & profile info; relations: posts, comments, likes
+- **Posts:** Content, image, visibility, counts; relations: author, comments
+- **Comments:** Nested replies, counts; relations: post, author, parent_comment
+- **Likes:** Polymorphic; unique `(user_id, target_type, target_id)`, composite index for fast lookups
 
 ## API Endpoints
 
 ### Authentication (`/api/auth`)
 
-- `POST /signup` - User registration
-- `POST /login` - User login (returns access token, sets refresh token cookie)
-- `POST /logout` - Logout (revokes refresh token)
-- `POST /refresh` - Refresh access token using refresh token cookie
+- `POST /signup` – register
+- `POST /login` – login (sets access & refresh tokens)
+- `POST /logout` – logout (revoke refresh token)
+- `POST /refresh` – refresh access token
 
 ### Posts (`/api/posts`)
 
-- `POST /posts` - Create post (with optional image)
-- `GET /posts` - List posts (with pagination, filtering, sorting)
-- `GET /posts/{post_id}` - Get single post
-- `PUT /posts/{post_id}` - Update post
-- `DELETE /posts/{post_id}` - Delete post
+- `POST /` – create post
+- `GET /` – list posts (pagination, filter, sort)
+- `GET /{post_id}` – retrieve post
+- `PUT /{post_id}` – update post
+- `DELETE /{post_id}` – delete post
 
 ### Comments (`/api/posts/{post_id}/comments`)
 
-- `POST /posts/{post_id}/comments` - Create comment
-- `GET /posts/{post_id}/comments` - List comments (with pagination, filtering)
-- `PUT /comments/{comment_id}` - Update comment
-- `DELETE /comments/{comment_id}` - Delete comment
+- `POST /` – create comment
+- `GET /` – list comments
+- `PUT /{comment_id}` – update comment
+- `DELETE /{comment_id}` – delete comment
 
 ### Likes (`/api/likes`)
 
-- `POST /posts/{post_id}/likes` - Toggle post like
-- `GET /posts/{post_id}/likes` - Get post likes list
-- `POST /comments/{comment_id}/likes` - Toggle comment like
-- `GET /comments/{comment_id}/likes` - Get comment likes list
+- `POST /posts/{post_id}/likes` – toggle post like
+- `GET /posts/{post_id}/likes` – get post likes
+- `POST /comments/{comment_id}/likes` – toggle comment like
+- `GET /comments/{comment_id}/likes` – get comment likes
 
 ### Notifications (`/api/notifications`)
 
-- `GET /notifications` - Get and consume user notifications
+- `GET /` – fetch & consume user notifications
 
 ## Security Features
 
-1. **Password Hashing**: bcrypt with salt rounds
-2. **JWT Tokens**: Signed tokens with expiration
-3. **HttpOnly Cookies**: Refresh tokens in secure, HttpOnly cookies
-4. **CORS**: Configured for specific frontend origin
-5. **Access Control**: Private posts only accessible to authors
-6. **Input Validation**: Pydantic schemas validate all inputs
-7. **SQL Injection Protection**: SQLAlchemy ORM with parameterized queries
+- Password hashing with bcrypt
+- JWT tokens with expiration
+- HttpOnly cookies for refresh tokens
+- CORS configured for frontend
+- Access control: private posts only visible to authors
+- Input validation via Pydantic
+- SQL injection protection via ORM
 
 ## Key Design Decisions
 
-1. **Async Architecture**: Entire backend uses async/await for better concurrency and performance
-2. **Clean Architecture**: Separation into domain, application (usecases), infrastructure (repos, models), and presentation (routes, schemas) layers
-3. **Repository Pattern**: Data access abstracted through repository classes
-4. **Use Case Pattern**: Business logic encapsulated in use case classes
-5. **Denormalized Counts**: Like and comment counts stored on parent models to avoid expensive joins
-6. **Redis for Notifications**: Fast, ephemeral storage suitable for real-time notifications
-7. **Optional Authentication**: Some endpoints accept optional auth to support both authenticated and anonymous access patterns
+- Async architecture for high concurrency
+- Clean architecture with domain, application, infrastructure, presentation layers
+- Repository & use case patterns for data access & business logic
+- Denormalized counts for likes & comments
+- Redis for notifications
+- Optional authentication for some endpoints
 
 ## Future Enhancements
 
-Potential areas for extension:
-
-- User profiles and friend relationships
-- Post sharing functionality
-- Notification persistence for historical viewing
-- Rate limiting and API throttling
-- Proper image storage (S3, GCS)
+- User profiles & friends
+- Post sharing
+- Persistent notifications
+- Rate limiting & throttling

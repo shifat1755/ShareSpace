@@ -2,31 +2,17 @@
 
 ## Prerequisites
 
-- Python 3.11+
-- PostgreSQL (matching settings in .env)
-- Redis
-- (Optional) Python venv
+- Docker
+- Docker Compose
 
-## 1. Install Dependencies
+## 1. Start the Application
 
-cd appifylabTask/backend
-python -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
+Run the following command in the `backend` directory:
 
-## 2. Configure Environment
+```bash
+docker-compose up
+```
 
-Create a `.env` file in backend/ using `.env.example` as a reference.
-
-## 3. Apply Database Migrations
-
-alembic upgrade head
-
-## 4. Run the API
-
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-
-## 5. Verify
+## 2. Verify
 
 Open: http://localhost:8000/docs
